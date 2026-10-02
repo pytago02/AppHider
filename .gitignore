@@ -1,0 +1,12 @@
+*.txt
+!CMakeLists.txt
+!README.txt
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+.DS_Store
+
+# Temporary files
+*.tmp
+*.bak
