@@ -248,6 +248,24 @@ namespace BossKeyTool
         public static string ScheduleSub { get { return IsEng ? "Only hide & mute during the specified time period" : "Chỉ tự động ẩn và tắt tiếng trong khoảng thời gian"; } }
         public static string ScheduleFrom { get { return IsEng ? "From:" : "Từ:"; } }
         public static string ScheduleTo { get { return IsEng ? "To:" : "Đến:"; } }
+        public static string ScheduleDaysLabel { get { return IsEng ? "Days:" : "Thứ:"; } } 
+        public static string CustomScheduleBtn { get { return IsEng ? "Custom" : "Tùy chỉnh"; } }
+        public static string CustomScheduleActive { get { return IsEng ? "⚡ Per-day schedule active" : "⚡ Lịch riêng từng ngày đang bật"; } }
+        public static string CustomScheduleDialogTitle { get { return IsEng ? "Per-Day Schedule Settings" : "Cài đặt lịch hoạt động theo thứ"; } }
+        public static string CustomScheduleDialogSub { get { return IsEng ? "Set active days and custom operating hours for each day of the week." : "Chọn các thứ hoạt động và tùy chỉnh khung giờ riêng cho từng ngày."; } }
+        public static string CustomScheduleEnableToggle { get { return IsEng ? "Enable separate hours for each day" : "Áp dụng khung giờ riêng cho từng ngày"; } }
+        public static string CustomScheduleEnableToggleSub { get { return IsEng ? "When disabled, all selected days use the main schedule hours" : "Khi tắt, tất cả các thứ được chọn sẽ dùng chung khung giờ ở bảng cài đặt"; } }
+        public static string PresetWorkdays { get { return IsEng ? "Mon - Fri" : "Thứ 2 - Thứ 6"; } }
+        public static string PresetWorkdaysSat { get { return IsEng ? "Mon - Sat" : "Thứ 2 - Thứ 7"; } }
+        public static string PresetAllWeek { get { return IsEng ? "All Week" : "Cả tuần"; } }
+        public static string PresetCopyMon { get { return IsEng ? "Copy Mon hours to all" : "Sao chép giờ T2 cho tất cả"; } }
+        public static string DialogSave { get { return IsEng ? "Save" : "Lưu"; } }
+        public static string DialogCancel { get { return IsEng ? "Cancel" : "Hủy"; } }
+
+        public static string[] ShortDaysVi = new string[] { "T2", "T3", "T4", "T5", "T6", "T7", "CN" };
+        public static string[] ShortDaysEng = new string[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+        public static string[] FullDaysVi = new string[] { "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật" };
+        public static string[] FullDaysEng = new string[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
         public static string Hotkey { get { return IsEng ? "Restore hotkey" : "Phím tắt khôi phục"; } }
         public static string HotkeySub { get { return IsEng ? "Quickly re-open hidden applications" : "Mở lại nhanh các ứng dụng đang bị ẩn"; } }
         public static string Theme { get { return IsEng ? "Theme" : "Giao diện"; } }
@@ -260,7 +278,7 @@ namespace BossKeyTool
         public static string NotRunning { get { return IsEng ? "Not running" : "Không chạy"; } }
         public static string Credits { get { return "© Kkmt"; } }
         
-        public static string[] Modes { get { return IsEng ? new string[] { "Normal mode", "Hide application", "Hide from taskbar (keep window visible)" } : new string[] { "Chế độ bình thường", "Chế độ: Ẩn ứng dụng", "Chế độ: Ẩn taskbar (không tự ẩn cửa sổ ứng dụng)" }; } }
+        public static string[] Modes { get { return IsEng ? new string[] { "Normal mode", "Hide application", "Hide from taskbar" } : new string[] { "Chế độ bình thường", "Chế độ: Ẩn ứng dụng", "Chế độ: Ẩn taskbar" }; } }
         public static string[] Themes { get { return IsEng ? new string[] { "Light", "Dark" } : new string[] { "Sáng", "Tối" }; } }
         public static string[] Languages { get { return new string[] { "Tiếng Việt", "English" }; } }
     }
@@ -284,10 +302,10 @@ namespace BossKeyTool
         public static Color DotBlur { get { return IsDark ? Color.FromArgb(255, 185, 0) : Color.FromArgb(157, 93, 0); } }
         public static Color DotTask { get { return Accent; } }
 
-        public static Font FontTitle = new Font("Segoe UI Semibold", 15F);
-        public static Font FontSubtitle = new Font("Segoe UI Semibold", 10.5F);
-        public static Font FontBody = new Font("Segoe UI", 10.5F);
-        public static Font FontBodySmall = new Font("Segoe UI", 9F);
+        public static Font FontTitle = new Font("Segoe UI Semibold", 13.5F);
+        public static Font FontSubtitle = new Font("Segoe UI Semibold", 9.75F);
+        public static Font FontBody = new Font("Segoe UI", 9.25F);
+        public static Font FontBodySmall = new Font("Segoe UI", 8.25F);
     }
 
     public class FluentToggle : Control
@@ -346,6 +364,833 @@ namespace BossKeyTool
         }
     }
 
+    public class DaySchedule
+    {
+        public DayOfWeek Day;
+        public bool Enabled;
+        public TimeSpan From;
+        public TimeSpan To;
+
+        public DaySchedule(DayOfWeek day, bool enabled, TimeSpan from, TimeSpan to)
+        {
+            this.Day = day;
+            this.Enabled = enabled;
+            this.From = from;
+            this.To = to;
+        }
+
+        public DaySchedule Clone()
+        {
+            return new DaySchedule(this.Day, this.Enabled, this.From, this.To);
+        }
+    }
+
+    public class DayPillButton : Control
+    {
+        private bool _selected = false;
+        public DayOfWeek Day { get; set; }
+        public string DisplayText { get; set; }
+
+        public bool Selected
+        {
+            get { return _selected; }
+            set { _selected = value; Invalidate(); }
+        }
+
+        public event EventHandler SelectedChanged;
+
+        public DayPillButton(DayOfWeek day, string text, bool selected)
+        {
+            this.Day = day;
+            this.DisplayText = text;
+            this._selected = selected;
+            this.Size = new Size(30, 24);
+            this.DoubleBuffered = true;
+            this.Cursor = Cursors.Hand;
+        }
+
+        protected override void OnClick(EventArgs e)
+        {
+            if (!this.Enabled) return;
+            Selected = !Selected;
+            if (SelectedChanged != null) SelectedChanged(this, EventArgs.Empty);
+            base.OnClick(e);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            Color parentBg = Parent != null ? Parent.BackColor : Theme.Bg;
+            e.Graphics.Clear(parentBg);
+
+            Rectangle rect = new Rectangle(0, 0, this.Width - 1, this.Height - 1);
+            using (GraphicsPath path = GraphicsExt.GetRoundedRect(rect, 5))
+            {
+                if (!this.Enabled)
+                {
+                    using (SolidBrush br = new SolidBrush(Theme.Card))
+                        e.Graphics.FillPath(br, path);
+                    using (Pen p = new Pen(Theme.Stroke, 1f))
+                        e.Graphics.DrawPath(p, path);
+                    using (SolidBrush textBr = new SolidBrush(Color.FromArgb(120, Theme.TextSecondary)))
+                    {
+                        StringFormat sf = new StringFormat() { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                        e.Graphics.DrawString(DisplayText, Theme.FontBodySmall, textBr, rect, sf);
+                    }
+                    return;
+                }
+
+                if (Selected)
+                {
+                    using (SolidBrush br = new SolidBrush(Theme.Accent))
+                        e.Graphics.FillPath(br, path);
+                    using (SolidBrush textBr = new SolidBrush(Theme.OnAccent))
+                    {
+                        StringFormat sf = new StringFormat() { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                        using (Font boldFont = new Font(Theme.FontBodySmall.FontFamily, Theme.FontBodySmall.Size, FontStyle.Bold))
+                        {
+                            e.Graphics.DrawString(DisplayText, boldFont, textBr, rect, sf);
+                        }
+                    }
+                }
+                else
+                {
+                    using (SolidBrush br = new SolidBrush(Theme.ControlFill))
+                        e.Graphics.FillPath(br, path);
+                    using (Pen p = new Pen(Theme.Stroke, 1f))
+                        e.Graphics.DrawPath(p, path);
+                    using (SolidBrush textBr = new SolidBrush(Theme.TextSecondary))
+                    {
+                        StringFormat sf = new StringFormat() { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                        e.Graphics.DrawString(DisplayText, Theme.FontBodySmall, textBr, rect, sf);
+                    }
+                }
+            }
+        }
+    }
+
+    public class DarkTimePicker : Control
+    {
+        private DateTime _value = DateTime.Today.AddHours(8).AddMinutes(30);
+        private bool _selectMinute = false;
+        private int _hoverPart = 0; // 0=none, 1=up, 2=down
+
+        public event EventHandler ValueChanged;
+
+        public DateTime Value
+        {
+            get { return _value; }
+            set
+            {
+                if (_value != value)
+                {
+                    _value = value;
+                    Invalidate();
+                    if (ValueChanged != null) ValueChanged(this, EventArgs.Empty);
+                }
+            }
+        }
+
+        public TimeSpan TimeOfDay
+        {
+            get { return _value.TimeOfDay; }
+            set { Value = _value.Date.Add(value); }
+        }
+
+        // Compatibility properties for DateTimePicker
+        public DateTimePickerFormat Format { get; set; }
+        public string CustomFormat { get; set; }
+        public bool ShowUpDown { get; set; }
+        public Color CalendarForeColor { get; set; }
+        public Color CalendarMonthBackground { get; set; }
+        public Color CalendarTitleBackColor { get; set; }
+
+        public DarkTimePicker()
+        {
+            this.Size = new Size(66, 26);
+            this.DoubleBuffered = true;
+            this.Cursor = Cursors.Hand;
+            this.Font = Theme.FontBody;
+            this.SetStyle(ControlStyles.Selectable | ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+            this.TabStop = true;
+        }
+
+        protected override void OnMouseDown(MouseEventArgs e)
+        {
+            this.Focus();
+            int btnWidth = 16;
+            if (e.X >= this.Width - btnWidth)
+            {
+                if (e.Y < this.Height / 2) AdjustTime(1);
+                else AdjustTime(-1);
+            }
+            else
+            {
+                _selectMinute = (e.X > (this.Width - btnWidth) / 2);
+                _digitStep = 0;
+                Invalidate();
+            }
+            base.OnMouseDown(e);
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            int btnWidth = 16;
+            int oldHover = _hoverPart;
+            if (e.X >= this.Width - btnWidth)
+            {
+                _hoverPart = (e.Y < this.Height / 2) ? 1 : 2;
+            }
+            else
+            {
+                _hoverPart = 0;
+            }
+            if (oldHover != _hoverPart) Invalidate();
+            base.OnMouseMove(e);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            _hoverPart = 0;
+            Invalidate();
+            base.OnMouseLeave(e);
+        }
+
+        protected override void OnMouseWheel(MouseEventArgs e)
+        {
+            if (e.Delta > 0) AdjustTime(1);
+            else if (e.Delta < 0) AdjustTime(-1);
+            base.OnMouseWheel(e);
+        }
+
+        protected override bool ProcessDialogKey(Keys keyData)
+        {
+            if (keyData == Keys.Up) { AdjustTime(1); return true; }
+            if (keyData == Keys.Down) { AdjustTime(-1); return true; }
+            if (keyData == Keys.Left) { _selectMinute = false; _digitStep = 0; Invalidate(); return true; }
+            if (keyData == Keys.Right) { _selectMinute = true; _digitStep = 0; Invalidate(); return true; }
+            return base.ProcessDialogKey(keyData);
+        }
+
+        private int _digitStep = 0;
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            if (!this.Enabled) return;
+            if (e.KeyCode >= Keys.D0 && e.KeyCode <= Keys.D9)
+            {
+                ApplyDigit(e.KeyCode - Keys.D0);
+                e.Handled = true;
+                return;
+            }
+            if (e.KeyCode >= Keys.NumPad0 && e.KeyCode <= Keys.NumPad9)
+            {
+                ApplyDigit(e.KeyCode - Keys.NumPad0);
+                e.Handled = true;
+                return;
+            }
+            base.OnKeyDown(e);
+        }
+
+        private void ApplyDigit(int digit)
+        {
+            if (_selectMinute)
+            {
+                int current = _value.Minute;
+                int next = (_digitStep == 0) ? digit * 10 : (current / 10) * 10 + digit;
+                if (next >= 60) next = 59;
+                _digitStep = (_digitStep == 0) ? 1 : 0;
+                Value = new DateTime(_value.Year, _value.Month, _value.Day, _value.Hour, next, 0);
+            }
+            else
+            {
+                int current = _value.Hour;
+                int next = (_digitStep == 0) ? digit * 10 : (current / 10) * 10 + digit;
+                if (next >= 24) next = 23;
+                _digitStep = (_digitStep == 0) ? 1 : 0;
+                Value = new DateTime(_value.Year, _value.Month, _value.Day, next, _value.Minute, 0);
+            }
+        }
+
+        private void AdjustTime(int delta)
+        {
+            if (!this.Enabled) return;
+            _digitStep = 0;
+            if (_selectMinute)
+            {
+                int m = _value.Minute + delta * 5;
+                if (m < 0) m = 55;
+                else if (m >= 60) m = 0;
+                Value = new DateTime(_value.Year, _value.Month, _value.Day, _value.Hour, m, 0);
+            }
+            else
+            {
+                int h = _value.Hour + delta;
+                if (h < 0) h = 23;
+                else if (h >= 24) h = 0;
+                Value = new DateTime(_value.Year, _value.Month, _value.Day, h, _value.Minute, 0);
+            }
+        }
+
+        protected override void OnGotFocus(EventArgs e) { base.OnGotFocus(e); Invalidate(); }
+        protected override void OnLostFocus(EventArgs e) { base.OnLostFocus(e); _digitStep = 0; Invalidate(); }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            e.Graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+
+            Color parentBg = this.Parent != null ? this.Parent.BackColor : Theme.Bg;
+            e.Graphics.Clear(parentBg);
+
+            Color bg = this.Enabled ? Theme.ControlFill : Theme.Card;
+            Color fg = this.Enabled ? Theme.TextPrimary : Theme.TextSecondary;
+            Color stroke = this.Focused ? Theme.Accent : Theme.Stroke;
+
+            Rectangle r = new Rectangle(0, 0, this.Width - 1, this.Height - 1);
+            using (GraphicsPath gp = GraphicsExt.GetRoundedRect(r, 4))
+            {
+                using (SolidBrush b = new SolidBrush(bg)) e.Graphics.FillPath(b, gp);
+                using (Pen p = new Pen(stroke, 1f)) e.Graphics.DrawPath(p, gp);
+            }
+
+            int btnW = 16;
+            int btnX = this.Width - btnW;
+            using (Pen p = new Pen(Theme.Stroke, 1f))
+            {
+                e.Graphics.DrawLine(p, btnX, 1, btnX, this.Height - 2);
+                e.Graphics.DrawLine(p, btnX, this.Height / 2, this.Width - 2, this.Height / 2);
+            }
+
+            if (_hoverPart == 1)
+            {
+                using (SolidBrush b = new SolidBrush(Theme.ControlFillHover))
+                    e.Graphics.FillRectangle(b, btnX + 1, 1, btnW - 2, this.Height / 2 - 1);
+            }
+            else if (_hoverPart == 2)
+            {
+                using (SolidBrush b = new SolidBrush(Theme.ControlFillHover))
+                    e.Graphics.FillRectangle(b, btnX + 1, this.Height / 2 + 1, btnW - 2, this.Height / 2 - 2);
+            }
+
+            using (SolidBrush br = new SolidBrush(fg))
+            {
+                Point[] upArrow = new Point[] {
+                    new Point(btnX + 4, this.Height / 4 + 2),
+                    new Point(btnX + 8, this.Height / 4 - 2),
+                    new Point(btnX + 12, this.Height / 4 + 2)
+                };
+                e.Graphics.FillPolygon(br, upArrow);
+
+                Point[] dnArrow = new Point[] {
+                    new Point(btnX + 4, this.Height * 3 / 4 - 2),
+                    new Point(btnX + 8, this.Height * 3 / 4 + 2),
+                    new Point(btnX + 12, this.Height * 3 / 4 - 2)
+                };
+                e.Graphics.FillPolygon(br, dnArrow);
+            }
+
+            string hStr = _value.ToString("HH");
+            string mStr = _value.ToString("mm");
+            int textW = btnX;
+            Rectangle textRect = new Rectangle(0, 0, textW, this.Height);
+            using (StringFormat sf = new StringFormat() { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+            {
+                using (SolidBrush br = new SolidBrush(fg))
+                {
+                    e.Graphics.DrawString(hStr + ":" + mStr, this.Font, br, textRect, sf);
+                }
+            }
+
+            if (this.Focused)
+            {
+                using (Pen accentPen = new Pen(Theme.Accent, 1.5f))
+                {
+                    int lineY = this.Height - 3;
+                    if (_selectMinute)
+                        e.Graphics.DrawLine(accentPen, textW / 2 + 2, lineY, textW - 4, lineY);
+                    else
+                        e.Graphics.DrawLine(accentPen, 4, lineY, textW / 2 - 2, lineY);
+                }
+            }
+        }
+    }
+
+    public class NoScrollComboBox : ComboBox
+    {
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("uxtheme.dll", CharSet = CharSet.Auto)]
+        public static extern int SetWindowTheme(IntPtr hWnd, string pszSubAppName, string pszSubIdList);
+
+        private const int WM_MOUSEWHEEL = 0x020A;
+        private const int WM_PAINT = 0x000F;
+
+        public NoScrollComboBox()
+        {
+            this.DrawMode = DrawMode.OwnerDrawFixed;
+            this.DropDownStyle = ComboBoxStyle.DropDownList;
+            this.FlatStyle = FlatStyle.Flat;
+            this.DoubleBuffered = true;
+            this.ItemHeight = 22;
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            try
+            {
+                SetWindowTheme(this.Handle, Theme.IsDark ? "DarkMode_CFD" : "CFD", null);
+            }
+            catch { }
+        }
+
+        public void ApplyTheme()
+        {
+            this.BackColor = Theme.ControlFill;
+            this.ForeColor = Theme.TextPrimary;
+            try
+            {
+                if (this.IsHandleCreated)
+                    SetWindowTheme(this.Handle, Theme.IsDark ? "DarkMode_CFD" : "CFD", null);
+            }
+            catch { }
+            this.Invalidate();
+        }
+
+        protected override void OnGotFocus(EventArgs e) { base.OnGotFocus(e); Invalidate(); }
+        protected override void OnLostFocus(EventArgs e) { base.OnLostFocus(e); Invalidate(); }
+        protected override void OnMouseEnter(EventArgs e) { base.OnMouseEnter(e); Invalidate(); }
+        protected override void OnMouseLeave(EventArgs e) { base.OnMouseLeave(e); Invalidate(); }
+
+        protected override void OnDrawItem(DrawItemEventArgs e)
+        {
+            if (e.Index < 0) return;
+            bool isComboEdit = (e.State & DrawItemState.ComboBoxEdit) != 0;
+            bool selected = (e.State & DrawItemState.Selected) != 0 && !isComboEdit;
+            Color bg = selected ? Theme.Accent : this.BackColor;
+            Color fg = selected ? Theme.OnAccent : this.ForeColor;
+
+            using (SolidBrush b = new SolidBrush(bg))
+                e.Graphics.FillRectangle(b, e.Bounds);
+
+            using (SolidBrush b = new SolidBrush(fg))
+            {
+                string text = this.Items[e.Index].ToString();
+                StringFormat sf = new StringFormat()
+                {
+                    LineAlignment = StringAlignment.Center,
+                    Trimming = StringTrimming.EllipsisCharacter,
+                    FormatFlags = StringFormatFlags.NoWrap
+                };
+                Rectangle r = new Rectangle(e.Bounds.X + 6, e.Bounds.Y, e.Bounds.Width - 12, e.Bounds.Height);
+                e.Graphics.DrawString(text, this.Font, b, r, sf);
+            }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WM_MOUSEWHEEL)
+            {
+                if (!this.DroppedDown)
+                {
+                    Control p = this.Parent;
+                    while (p != null)
+                    {
+                        ScrollableControl sc = p as ScrollableControl;
+                        if (sc != null && sc.AutoScroll)
+                        {
+                            SendMessage(sc.Handle, m.Msg, m.WParam, m.LParam);
+                            break;
+                        }
+                        p = p.Parent;
+                    }
+                    return;
+                }
+            }
+
+            base.WndProc(ref m);
+
+            if (m.Msg == WM_PAINT)
+            {
+                using (Graphics g = Graphics.FromHwnd(this.Handle))
+                {
+                    g.SmoothingMode = SmoothingMode.AntiAlias;
+
+                    int btnW = 22;
+                    Rectangle btnRect = new Rectangle(this.Width - btnW, 1, btnW - 1, this.Height - 2);
+                    using (SolidBrush b = new SolidBrush(this.BackColor))
+                        g.FillRectangle(b, btnRect);
+
+                    int arrowX = btnRect.X + (btnRect.Width - 8) / 2;
+                    int arrowY = (this.Height - 4) / 2;
+                    using (Pen p = new Pen(this.ForeColor, 1.4f))
+                    {
+                        p.StartCap = LineCap.Round;
+                        p.EndCap = LineCap.Round;
+                        p.LineJoin = LineJoin.Round;
+                        g.DrawLines(p, new Point[] {
+                            new Point(arrowX, arrowY),
+                            new Point(arrowX + 4, arrowY + 4),
+                            new Point(arrowX + 8, arrowY)
+                        });
+                    }
+
+                    Rectangle borderRect = new Rectangle(0, 0, this.Width - 1, this.Height - 1);
+                    using (Pen p = new Pen(this.Focused ? Theme.Accent : Theme.Stroke, 1f))
+                        g.DrawRectangle(p, borderRect);
+                }
+            }
+        }
+    }
+
+    public class CustomScheduleForm : Form
+    {
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
+        [DllImport("uxtheme.dll", EntryPoint = "#133", ExactSpelling = true)]
+        private static extern bool AllowDarkModeForWindow(IntPtr hWnd, bool allow);
+
+        [DllImport("uxtheme.dll", CharSet = CharSet.Auto)]
+        public static extern int SetWindowTheme(IntPtr hWnd, string pszSubAppName, string pszSubIdList);
+
+        private MainForm _mainForm;
+        private FluentToggle customToggle;
+        private Label lblTitle, lblSub, lblToggle, lblToggleSub;
+        private Panel togglePanel;
+        private Panel daysPanel;
+        private Button btnPresetWorkdays, btnPresetSat, btnPresetAll, btnCopyMon;
+        private Button btnSave, btnCancel;
+
+        private Dictionary<DayOfWeek, CheckBox> chkDays = new Dictionary<DayOfWeek, CheckBox>();
+        private Dictionary<DayOfWeek, Label> lblsFrom = new Dictionary<DayOfWeek, Label>();
+        private Dictionary<DayOfWeek, DarkTimePicker> dtpsFrom = new Dictionary<DayOfWeek, DarkTimePicker>();
+        private Dictionary<DayOfWeek, Label> lblsTo = new Dictionary<DayOfWeek, Label>();
+        private Dictionary<DayOfWeek, DarkTimePicker> dtpsTo = new Dictionary<DayOfWeek, DarkTimePicker>();
+
+        public CustomScheduleForm(MainForm mainForm)
+        {
+            this._mainForm = mainForm;
+            this.Text = Lang.CustomScheduleDialogTitle;
+            this.ClientSize = new Size(520, 510);
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.ShowInTaskbar = false;
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.DoubleBuffered = true;
+            this.Font = Theme.FontBody;
+            this.BackColor = Theme.Bg;
+            this.ForeColor = Theme.TextPrimary;
+
+            int useImmersiveDarkMode = Theme.IsDark ? 1 : 0;
+            DwmSetWindowAttribute(this.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useImmersiveDarkMode, sizeof(int));
+            try { AllowDarkModeForWindow(this.Handle, true); } catch { }
+
+            InitFormUI();
+            LoadData();
+        }
+
+        private void InitFormUI()
+        {
+            lblTitle = new Label() {
+                Text = Lang.CustomScheduleDialogTitle,
+                Font = Theme.FontTitle,
+                ForeColor = Theme.TextPrimary,
+                Location = new Point(20, 16),
+                AutoSize = true
+            };
+            this.Controls.Add(lblTitle);
+
+            lblSub = new Label() {
+                Text = Lang.CustomScheduleDialogSub,
+                Font = Theme.FontBodySmall,
+                ForeColor = Theme.TextSecondary,
+                Location = new Point(20, 44),
+                AutoSize = true
+            };
+            this.Controls.Add(lblSub);
+
+            togglePanel = new Panel() {
+                Location = new Point(20, 70),
+                Size = new Size(this.ClientSize.Width - 40, 50),
+                BackColor = Theme.Card
+            };
+            togglePanel.Paint += delegate(object s, PaintEventArgs pe) {
+                pe.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                Rectangle r = new Rectangle(0, 0, togglePanel.Width - 1, togglePanel.Height - 1);
+                using (GraphicsPath gp = GraphicsExt.GetRoundedRect(r, 6))
+                {
+                    using (Pen p = new Pen(Theme.Stroke, 1f)) pe.Graphics.DrawPath(p, gp);
+                }
+            };
+            this.Controls.Add(togglePanel);
+
+            lblToggle = new Label() {
+                Text = Lang.CustomScheduleEnableToggle,
+                Font = Theme.FontBody,
+                ForeColor = Theme.TextPrimary,
+                Location = new Point(14, 8),
+                AutoSize = true
+            };
+            togglePanel.Controls.Add(lblToggle);
+
+            lblToggleSub = new Label() {
+                Text = Lang.CustomScheduleEnableToggleSub,
+                Font = Theme.FontBodySmall,
+                ForeColor = Theme.TextSecondary,
+                Location = new Point(14, 26),
+                AutoSize = true
+            };
+            togglePanel.Controls.Add(lblToggleSub);
+
+            customToggle = new FluentToggle();
+            customToggle.Location = new Point(togglePanel.Width - 54, 15);
+            customToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            customToggle.CheckedChanged += delegate {
+                UpdateControlsState();
+            };
+            togglePanel.Controls.Add(customToggle);
+
+            int btnY = 130;
+            btnPresetWorkdays = CreatePresetButton(Lang.PresetWorkdays, 20, btnY, 100, delegate {
+                SetPresetDays(true, true, true, true, true, false, false);
+            });
+            this.Controls.Add(btnPresetWorkdays);
+
+            btnPresetSat = CreatePresetButton(Lang.PresetWorkdaysSat, 126, btnY, 100, delegate {
+                SetPresetDays(true, true, true, true, true, true, false);
+            });
+            this.Controls.Add(btnPresetSat);
+
+            btnPresetAll = CreatePresetButton(Lang.PresetAllWeek, 232, btnY, 90, delegate {
+                SetPresetDays(true, true, true, true, true, true, true);
+            });
+            this.Controls.Add(btnPresetAll);
+
+            btnCopyMon = CreatePresetButton(Lang.PresetCopyMon, 328, btnY, 172, delegate {
+                CopyMonHoursToAll();
+            });
+            this.Controls.Add(btnCopyMon);
+
+            daysPanel = new Panel() {
+                Location = new Point(20, 164),
+                Size = new Size(this.ClientSize.Width - 40, 282),
+                BackColor = Theme.Card
+            };
+            daysPanel.HandleCreated += delegate {
+                try {
+                    AllowDarkModeForWindow(daysPanel.Handle, true);
+                    SetWindowTheme(daysPanel.Handle, Theme.IsDark ? "DarkMode_Explorer" : "Explorer", null);
+                } catch { }
+            };
+            daysPanel.Paint += delegate(object s, PaintEventArgs pe) {
+                pe.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                Rectangle r = new Rectangle(0, 0, daysPanel.Width - 1, daysPanel.Height - 1);
+                using (GraphicsPath gp = GraphicsExt.GetRoundedRect(r, 6))
+                {
+                    using (Pen p = new Pen(Theme.Stroke, 1f)) pe.Graphics.DrawPath(p, gp);
+                }
+            };
+            this.Controls.Add(daysPanel);
+
+            for (int i = 0; i < MainForm.OrderedDaysOfWeek.Length; i++)
+            {
+                DayOfWeek d = MainForm.OrderedDaysOfWeek[i];
+                int rowY = 8 + i * 38;
+
+                CheckBox chk = new CheckBox();
+                chk.Text = Lang.IsEng ? Lang.FullDaysEng[i] : Lang.FullDaysVi[i];
+                chk.Font = Theme.FontBody;
+                chk.ForeColor = Theme.TextPrimary;
+                chk.Location = new Point(14, rowY + 3);
+                chk.Size = new Size(114, 24);
+                chk.Cursor = Cursors.Hand;
+                chk.CheckedChanged += delegate { UpdateControlsState(); };
+                daysPanel.Controls.Add(chk);
+                chkDays[d] = chk;
+
+                Label lblF = new Label() {
+                    Text = Lang.ScheduleFrom,
+                    Font = Theme.FontBodySmall,
+                    ForeColor = Theme.TextSecondary,
+                    Location = new Point(134, rowY + 6),
+                    AutoSize = true
+                };
+                daysPanel.Controls.Add(lblF);
+                lblsFrom[d] = lblF;
+
+                DarkTimePicker dtpF = new DarkTimePicker();
+                dtpF.Location = new Point(172, rowY + 3);
+                dtpF.Width = 66;
+                daysPanel.Controls.Add(dtpF);
+                dtpsFrom[d] = dtpF;
+
+                Label lblT = new Label() {
+                    Text = Lang.ScheduleTo,
+                    Font = Theme.FontBodySmall,
+                    ForeColor = Theme.TextSecondary,
+                    Location = new Point(246, rowY + 6),
+                    AutoSize = true
+                };
+                daysPanel.Controls.Add(lblT);
+                lblsTo[d] = lblT;
+
+                DarkTimePicker dtpT = new DarkTimePicker();
+                dtpT.Location = new Point(286, rowY + 3);
+                dtpT.Width = 66;
+                daysPanel.Controls.Add(dtpT);
+                dtpsTo[d] = dtpT;
+            }
+
+            btnCancel = new Button() {
+                Text = Lang.DialogCancel,
+                Location = new Point(this.ClientSize.Width - 20 - 90, this.ClientSize.Height - 48),
+                Size = new Size(90, 32),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Theme.ControlFill,
+                ForeColor = Theme.TextPrimary,
+                Font = Theme.FontBody,
+                Cursor = Cursors.Hand
+            };
+            btnCancel.FlatAppearance.BorderColor = Theme.Stroke;
+            btnCancel.Click += delegate {
+                this.DialogResult = DialogResult.Cancel;
+                this.Close();
+            };
+            this.Controls.Add(btnCancel);
+
+            btnSave = new Button() {
+                Text = Lang.DialogSave,
+                Location = new Point(this.ClientSize.Width - 20 - 90 - 10 - 90, this.ClientSize.Height - 48),
+                Size = new Size(90, 32),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Theme.Accent,
+                ForeColor = Theme.OnAccent,
+                Font = new Font("Segoe UI Semibold", 9.5F),
+                Cursor = Cursors.Hand
+            };
+            btnSave.FlatAppearance.BorderSize = 0;
+            btnSave.Click += SaveAndClose;
+            this.Controls.Add(btnSave);
+        }
+
+        private Button CreatePresetButton(string text, int x, int y, int width, EventHandler onClick)
+        {
+            Button btn = new Button();
+            btn.Text = text;
+            btn.Location = new Point(x, y);
+            btn.Size = new Size(width, 26);
+            btn.FlatStyle = FlatStyle.Flat;
+            btn.FlatAppearance.BorderColor = Theme.Stroke;
+            btn.BackColor = Theme.ControlFill;
+            btn.ForeColor = Theme.TextPrimary;
+            btn.Font = Theme.FontBodySmall;
+            btn.Cursor = Cursors.Hand;
+            btn.Click += onClick;
+            return btn;
+        }
+
+        private void SetPresetDays(bool mon, bool tue, bool wed, bool thu, bool fri, bool sat, bool sun)
+        {
+            bool[] states = new bool[] { mon, tue, wed, thu, fri, sat, sun };
+            for (int i = 0; i < MainForm.OrderedDaysOfWeek.Length; i++)
+            {
+                DayOfWeek d = MainForm.OrderedDaysOfWeek[i];
+                if (chkDays.ContainsKey(d)) chkDays[d].Checked = states[i];
+            }
+            UpdateControlsState();
+        }
+
+        private void CopyMonHoursToAll()
+        {
+            DayOfWeek mon = DayOfWeek.Monday;
+            if (!dtpsFrom.ContainsKey(mon) || !dtpsTo.ContainsKey(mon)) return;
+            DateTime fromVal = dtpsFrom[mon].Value;
+            DateTime toVal = dtpsTo[mon].Value;
+
+            for (int i = 1; i < MainForm.OrderedDaysOfWeek.Length; i++)
+            {
+                DayOfWeek d = MainForm.OrderedDaysOfWeek[i];
+                if (dtpsFrom.ContainsKey(d)) dtpsFrom[d].Value = fromVal;
+                if (dtpsTo.ContainsKey(d)) dtpsTo[d].Value = toVal;
+            }
+        }
+
+        private void LoadData()
+        {
+            customToggle.Checked = _mainForm.ScheduleCustomPerDay;
+            DateTime today = DateTime.Today;
+
+            for (int i = 0; i < MainForm.OrderedDaysOfWeek.Length; i++)
+            {
+                DayOfWeek d = MainForm.OrderedDaysOfWeek[i];
+                DaySchedule ds;
+                if (_mainForm.CustomDaySchedules.TryGetValue(d, out ds))
+                {
+                    chkDays[d].Checked = ds.Enabled;
+                    dtpsFrom[d].Value = today.Add(ds.From);
+                    dtpsTo[d].Value = today.Add(ds.To);
+                }
+                else
+                {
+                    bool isSel = _mainForm.ScheduleDays.Contains(d);
+                    chkDays[d].Checked = isSel;
+                    dtpsFrom[d].Value = today.Add(_mainForm.ScheduleFrom);
+                    dtpsTo[d].Value = today.Add(_mainForm.ScheduleTo);
+                }
+            }
+
+            UpdateControlsState();
+        }
+
+        private void UpdateControlsState()
+        {
+            bool isCustom = customToggle.Checked;
+            DateTime today = DateTime.Today;
+
+            foreach (DayOfWeek d in MainForm.OrderedDaysOfWeek)
+            {
+                bool dayActive = chkDays[d].Checked;
+                bool enablePickers = isCustom && dayActive;
+
+                dtpsFrom[d].Enabled = enablePickers;
+                dtpsTo[d].Enabled = enablePickers;
+                lblsFrom[d].Enabled = enablePickers;
+                lblsTo[d].Enabled = enablePickers;
+
+                if (!isCustom)
+                {
+                    dtpsFrom[d].Value = today.Add(_mainForm.ScheduleFrom);
+                    dtpsTo[d].Value = today.Add(_mainForm.ScheduleTo);
+                }
+            }
+
+            btnCopyMon.Enabled = isCustom;
+        }
+
+        private void SaveAndClose(object sender, EventArgs e)
+        {
+            _mainForm.ScheduleCustomPerDay = customToggle.Checked;
+            _mainForm.ScheduleDays.Clear();
+
+            foreach (DayOfWeek d in MainForm.OrderedDaysOfWeek)
+            {
+                bool en = chkDays[d].Checked;
+                if (en) _mainForm.ScheduleDays.Add(d);
+
+                TimeSpan f = dtpsFrom[d].Value.TimeOfDay;
+                TimeSpan t = dtpsTo[d].Value.TimeOfDay;
+                _mainForm.CustomDaySchedules[d] = new DaySchedule(d, en, f, t);
+            }
+
+            this.DialogResult = DialogResult.OK;
+            this.Close();
+        }
+    }
+
     public class AppRowControl : Panel
     {
         public string ProcessName;
@@ -355,7 +1200,7 @@ namespace BossKeyTool
         public bool IsRunning;
         private MainForm main;
 
-        private ComboBox modeCombo;
+        private NoScrollComboBox modeCombo;
 
         public AppRowControl(MainForm main, string proc, string title, int mode, bool isRunning)
         {
@@ -364,8 +1209,11 @@ namespace BossKeyTool
             this.WindowTitle = title;
             this.Mode = mode;
             this.IsRunning = isRunning;
-            this.Height = 56;
-            this.Width = 600;
+            this.Height = 52;
+            int initialWidth = (main != null && main.listPanel != null && main.listPanel.ClientSize.Width > 0) 
+                ? main.listPanel.ClientSize.Width 
+                : 560;
+            this.Width = initialWidth;
             this.Margin = new Padding(0);
             this.DoubleBuffered = true;
             this.Cursor = Cursors.Hand;
@@ -381,14 +1229,14 @@ namespace BossKeyTool
             }
             catch { }
 
-            modeCombo = new ComboBox();
+            modeCombo = new NoScrollComboBox();
             modeCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             modeCombo.Items.AddRange(Lang.Modes);
             modeCombo.SelectedIndex = mode;
-            modeCombo.Font = new Font("Segoe UI", 9.5F);
-            modeCombo.Width = 340;
-            modeCombo.DropDownWidth = 360;
-            modeCombo.Location = new Point(this.Width - 355, (this.Height - modeCombo.Height) / 2);
+            modeCombo.Font = new Font("Segoe UI", 9F);
+            modeCombo.Width = 190;
+            modeCombo.DropDownWidth = 190;
+            modeCombo.Location = new Point(this.Width - 190 - 16, (this.Height - modeCombo.Height) / 2);
             modeCombo.Anchor = AnchorStyles.Right | AnchorStyles.Top;
             modeCombo.BackColor = Theme.ControlFill;
             modeCombo.ForeColor = Theme.TextPrimary;
@@ -430,8 +1278,7 @@ namespace BossKeyTool
 
         public void ApplyTheme()
         {
-            modeCombo.BackColor = Theme.ControlFill;
-            modeCombo.ForeColor = Theme.TextPrimary;
+            modeCombo.ApplyTheme();
             this.BackColor = Theme.Card;
             this.Invalidate();
         }
@@ -443,9 +1290,9 @@ namespace BossKeyTool
             e.Graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
             using (Pen p = new Pen(Theme.Stroke))
-                e.Graphics.DrawLine(p, 16, 0, this.Width - 16, 0);
+                e.Graphics.DrawLine(p, 14, 0, this.Width - 14, 0);
 
-            Rectangle iconRect = new Rectangle(16, 12, 32, 32);
+            Rectangle iconRect = new Rectangle(14, 11, 30, 30);
             if (AppIcon != null) e.Graphics.DrawIcon(AppIcon, iconRect);
             else e.Graphics.DrawIcon(SystemIcons.Application, iconRect);
 
@@ -455,14 +1302,15 @@ namespace BossKeyTool
                     e.Graphics.FillRectangle(overlay, iconRect);
             }
 
-            int textMaxW = modeCombo.Left - 76;
+            int textLeft = 52;
+            int textMaxW = modeCombo.Left - textLeft - 22;
             using (SolidBrush brPrimary = new SolidBrush(IsRunning ? Theme.TextPrimary : Theme.TextSecondary))
             using (SolidBrush brSecondary = new SolidBrush(Theme.TextSecondary))
             {
-                if (textMaxW > 50)
+                if (textMaxW > 40)
                 {
-                    RectangleF titleRect = new RectangleF(60, 10, textMaxW, 20);
-                    RectangleF subRect = new RectangleF(60, 30, textMaxW, 18);
+                    RectangleF titleRect = new RectangleF(textLeft, 8, textMaxW, 19);
+                    RectangleF subRect = new RectangleF(textLeft, 27, textMaxW, 17);
                     using (StringFormat sf = new StringFormat())
                     {
                         sf.Trimming = StringTrimming.EllipsisCharacter;
@@ -473,8 +1321,8 @@ namespace BossKeyTool
                 }
                 else
                 {
-                    e.Graphics.DrawString(WindowTitle, Theme.FontBody, brPrimary, new PointF(60, 10));
-                    e.Graphics.DrawString(ProcessName + (IsRunning ? "" : " (" + Lang.NotRunning + ")"), Theme.FontBodySmall, brSecondary, new PointF(60, 30));
+                    e.Graphics.DrawString(WindowTitle, Theme.FontBody, brPrimary, new PointF(textLeft, 8));
+                    e.Graphics.DrawString(ProcessName + (IsRunning ? "" : " (" + Lang.NotRunning + ")"), Theme.FontBodySmall, brSecondary, new PointF(textLeft, 27));
                 }
             }
 
@@ -484,7 +1332,7 @@ namespace BossKeyTool
 
             using (SolidBrush dotBr = new SolidBrush(dotColor))
             {
-                e.Graphics.FillEllipse(dotBr, modeCombo.Left - 16, (this.Height - 8) / 2, 8, 8);
+                e.Graphics.FillEllipse(dotBr, modeCombo.Left - 14, (this.Height - 7) / 2, 7, 7);
             }
         }
     }
@@ -536,6 +1384,27 @@ namespace BossKeyTool
         
         [DllImport("dwmapi.dll")]
         static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
+
+        [DllImport("uxtheme.dll", EntryPoint = "#135", ExactSpelling = true)]
+        public static extern int SetPreferredAppMode(int appMode);
+
+        [DllImport("uxtheme.dll", EntryPoint = "#133", ExactSpelling = true)]
+        public static extern bool AllowDarkModeForWindow(IntPtr hWnd, bool allow);
+
+        [DllImport("uxtheme.dll", CharSet = CharSet.Auto)]
+        public static extern int SetWindowTheme(IntPtr hWnd, string pszSubAppName, string pszSubIdList);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool ShowScrollBar(IntPtr hWnd, int wBar, [MarshalAs(UnmanagedType.Bool)] bool bShow);
+        private const int SB_HORZ = 0;
+        private const int SB_VERT = 1;
+
+        [DllImport("user32.dll")]
+        private static extern bool RedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate, uint flags);
+        private const uint RDW_INVALIDATE = 0x0001;
+        private const uint RDW_FRAME = 0x0400;
+        private const uint RDW_UPDATENOW = 0x0100;
 
         private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
         private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
@@ -614,14 +1483,18 @@ namespace BossKeyTool
         const int SW_SHOW = 5;
         const int SW_RESTORE = 9;
 
-        private FlowLayoutPanel listPanel;
+        public FlowLayoutPanel listPanel;
         private Button saveButton;
         private Button refreshButton;
         private FluentToggle startupToggle;
         private FluentToggle showStartToggle;
         private FluentToggle muteToggle;
         private FluentToggle scheduleToggle;
-        private DateTimePicker dtpScheduleFrom, dtpScheduleTo;
+        private DarkTimePicker dtpScheduleFrom, dtpScheduleTo;
+        private Label lblScheduleDays;
+        private DayPillButton[] dayPillButtons;
+        private Button btnCustomSchedule;
+        private Label lblCustomIndicator;
         private TextBox hotkeyBox;
         private Label titleLabel, subTitleLabel, lblSet, lblStart, lblStartSub, startupLabel, lblTheme, lblLang, lblCredits;
         private Label lblShowStart, lblShowStartSub, showStartLabel;
@@ -633,8 +1506,8 @@ namespace BossKeyTool
         private bool _allowVisible = false;
         private NotifyIcon mainTrayIcon;
         private Timer monitorTimer;
-        private ComboBox themeCombo;
-        private ComboBox langCombo;
+        private NoScrollComboBox themeCombo;
+        private NoScrollComboBox langCombo;
         private TextBox searchBox;
         private ContextMenu contextMenu;
 
@@ -644,6 +1517,20 @@ namespace BossKeyTool
         public bool ScheduleEnabled = false;
         public TimeSpan ScheduleFrom = new TimeSpan(8, 0, 0);
         public TimeSpan ScheduleTo = new TimeSpan(17, 0, 0);
+        public static readonly DayOfWeek[] OrderedDaysOfWeek = new DayOfWeek[] {
+            DayOfWeek.Monday,
+            DayOfWeek.Tuesday,
+            DayOfWeek.Wednesday,
+            DayOfWeek.Thursday,
+            DayOfWeek.Friday,
+            DayOfWeek.Saturday,
+            DayOfWeek.Sunday
+        };
+        public HashSet<DayOfWeek> ScheduleDays = new HashSet<DayOfWeek>() {
+            DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday
+        };
+        public bool ScheduleCustomPerDay = false;
+        public Dictionary<DayOfWeek, DaySchedule> CustomDaySchedules = new Dictionary<DayOfWeek, DaySchedule>();
 
         public uint HotkeyMods = 2; // Default: Ctrl (2)
         public uint HotkeyVK = 123; // Default: F12 (Keys.F12)
@@ -655,71 +1542,199 @@ namespace BossKeyTool
         private Dictionary<IntPtr, NotifyIcon> blurHiddenIcons = new Dictionary<IntPtr, NotifyIcon>();
         private Dictionary<IntPtr, NotifyIcon> taskbarHiddenIcons = new Dictionary<IntPtr, NotifyIcon>();
         
-        private string configFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.ini");
+        private string configFile = Path.Combine(Application.StartupPath, "config.ini");
         private string appName = "AppHider";
         
         private ITaskbarList taskbar;
 
         public bool LoadShowStartSetting()
         {
-            if (File.Exists(configFile))
+            try
             {
-                foreach (string line in File.ReadAllLines(configFile)) {
-                    if (line.StartsWith("ShowStart=", StringComparison.OrdinalIgnoreCase)) {
-                        string val = line.Substring(10).Trim();
-                        bool res;
-                        if (bool.TryParse(val, out res)) return res;
+                if (File.Exists(configFile))
+                {
+                    foreach (string line in File.ReadAllLines(configFile)) {
+                        if (line.StartsWith("ShowStart=", StringComparison.OrdinalIgnoreCase)) {
+                            string val = line.Substring(10).Trim();
+                            bool res;
+                            if (bool.TryParse(val, out res)) return res;
+                        }
                     }
                 }
-            }
+            } catch { }
             return true;
         }
 
         private void SaveConfigValue(string keyToSave, string valToSave)
         {
-            Dictionary<string, string> dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (File.Exists(configFile)) {
-                foreach (string line in File.ReadAllLines(configFile)) {
-                    int idx = line.IndexOf('=');
-                    if (idx > 0) dict[line.Substring(0, idx).Trim()] = line.Substring(idx + 1).Trim();
+            try
+            {
+                Dictionary<string, string> dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                if (File.Exists(configFile)) {
+                    foreach (string line in File.ReadAllLines(configFile)) {
+                        int idx = line.IndexOf('=');
+                        if (idx > 0) dict[line.Substring(0, idx).Trim()] = line.Substring(idx + 1).Trim();
+                    }
                 }
-            }
-            dict[keyToSave] = valToSave;
-            List<string> lines = new List<string>();
-            foreach (var kvp in dict) lines.Add(kvp.Key + "=" + kvp.Value);
-            File.WriteAllLines(configFile, lines.ToArray());
+                dict[keyToSave] = valToSave;
+                List<string> lines = new List<string>();
+                foreach (var kvp in dict) lines.Add(kvp.Key + "=" + kvp.Value);
+                File.WriteAllLines(configFile, lines.ToArray());
+            } catch { }
         }
 
         private void SaveConfigValues(Dictionary<string, string> dictToUpdate)
         {
-            Dictionary<string, string> dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (File.Exists(configFile)) {
-                foreach (string line in File.ReadAllLines(configFile)) {
-                    int idx = line.IndexOf('=');
-                    if (idx > 0) dict[line.Substring(0, idx).Trim()] = line.Substring(idx + 1).Trim();
-                }
-            }
-            foreach (var kvp in dictToUpdate)
+            try
             {
-                dict[kvp.Key] = kvp.Value;
-            }
-            List<string> lines = new List<string>();
-            foreach (var kvp in dict) lines.Add(kvp.Key + "=" + kvp.Value);
-            File.WriteAllLines(configFile, lines.ToArray());
+                Dictionary<string, string> dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                if (File.Exists(configFile)) {
+                    foreach (string line in File.ReadAllLines(configFile)) {
+                        int idx = line.IndexOf('=');
+                        if (idx > 0) dict[line.Substring(0, idx).Trim()] = line.Substring(idx + 1).Trim();
+                    }
+                }
+                foreach (var kvp in dictToUpdate)
+                {
+                    dict[kvp.Key] = kvp.Value;
+                }
+                List<string> lines = new List<string>();
+                foreach (var kvp in dict) lines.Add(kvp.Key + "=" + kvp.Value);
+                File.WriteAllLines(configFile, lines.ToArray());
+            } catch { }
         }
 
         public bool IsScheduleActive()
         {
             if (!ScheduleEnabled) return true;
-            TimeSpan now = DateTime.Now.TimeOfDay;
-            if (ScheduleFrom <= ScheduleTo)
+            DateTime now = DateTime.Now;
+            DayOfWeek today = now.DayOfWeek;
+            TimeSpan currentTime = now.TimeOfDay;
+
+            if (ScheduleCustomPerDay)
             {
-                return now >= ScheduleFrom && now <= ScheduleTo;
+                DaySchedule ds;
+                if (CustomDaySchedules.TryGetValue(today, out ds))
+                {
+                    if (!ds.Enabled) return false;
+                    return IsTimeInRange(currentTime, ds.From, ds.To);
+                }
+                return false;
             }
             else
             {
-                return now >= ScheduleFrom || now <= ScheduleTo;
+                if (!ScheduleDays.Contains(today)) return false;
+                return IsTimeInRange(currentTime, ScheduleFrom, ScheduleTo);
             }
+        }
+
+        private static bool IsTimeInRange(TimeSpan now, TimeSpan from, TimeSpan to)
+        {
+            if (from <= to)
+            {
+                return now >= from && now <= to;
+            }
+            else
+            {
+                return now >= from || now <= to;
+            }
+        }
+
+        private static bool TryParseDayOfWeek(string str, out DayOfWeek dow)
+        {
+            dow = DayOfWeek.Monday;
+            if (string.IsNullOrEmpty(str)) return false;
+            str = str.Trim().ToLowerInvariant();
+            if (str == "mon" || str == "monday" || str == "1" || str == "t2" || str == "thu2") { dow = DayOfWeek.Monday; return true; }
+            if (str == "tue" || str == "tuesday" || str == "2" || str == "t3" || str == "thu3") { dow = DayOfWeek.Tuesday; return true; }
+            if (str == "wed" || str == "wednesday" || str == "3" || str == "t4" || str == "thu4") { dow = DayOfWeek.Wednesday; return true; }
+            if (str == "thu" || str == "thursday" || str == "4" || str == "t5" || str == "thu5") { dow = DayOfWeek.Thursday; return true; }
+            if (str == "fri" || str == "friday" || str == "5" || str == "t6" || str == "thu6") { dow = DayOfWeek.Friday; return true; }
+            if (str == "sat" || str == "saturday" || str == "6" || str == "t7" || str == "thu7") { dow = DayOfWeek.Saturday; return true; }
+            if (str == "sun" || str == "sunday" || str == "0" || str == "7" || str == "cn") { dow = DayOfWeek.Sunday; return true; }
+            return false;
+        }
+
+        public static string GetShortDayName(DayOfWeek d)
+        {
+            switch (d)
+            {
+                case DayOfWeek.Monday: return "Mon";
+                case DayOfWeek.Tuesday: return "Tue";
+                case DayOfWeek.Wednesday: return "Wed";
+                case DayOfWeek.Thursday: return "Thu";
+                case DayOfWeek.Friday: return "Fri";
+                case DayOfWeek.Saturday: return "Sat";
+                case DayOfWeek.Sunday: return "Sun";
+                default: return d.ToString();
+            }
+        }
+
+        public static List<string> GetDayKeys(IEnumerable<DayOfWeek> days)
+        {
+            HashSet<DayOfWeek> set = new HashSet<DayOfWeek>(days);
+            List<string> list = new List<string>();
+            foreach (DayOfWeek d in OrderedDaysOfWeek)
+            {
+                if (set.Contains(d)) list.Add(GetShortDayName(d));
+            }
+            return list;
+        }
+
+        private void OpenCustomScheduleDialog()
+        {
+            using (CustomScheduleForm dlg = new CustomScheduleForm(this))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    UpdateScheduleUIState();
+                    SaveSettingsToFile();
+                }
+            }
+        }
+
+        public void UpdateScheduleUIState()
+        {
+            if (dayPillButtons != null)
+            {
+                for (int i = 0; i < OrderedDaysOfWeek.Length; i++)
+                {
+                    DayOfWeek d = OrderedDaysOfWeek[i];
+                    dayPillButtons[i].DisplayText = Lang.IsEng ? Lang.ShortDaysEng[i] : Lang.ShortDaysVi[i];
+                    dayPillButtons[i].Selected = ScheduleDays.Contains(d);
+                    dayPillButtons[i].Enabled = ScheduleEnabled;
+                    dayPillButtons[i].Invalidate();
+                }
+            }
+
+            if (lblScheduleDays != null)
+            {
+                lblScheduleDays.Text = Lang.ScheduleDaysLabel;
+                lblScheduleDays.ForeColor = Theme.TextSecondary;
+                lblScheduleDays.Enabled = ScheduleEnabled;
+            }
+
+            if (btnCustomSchedule != null)
+            {
+                btnCustomSchedule.Text = Lang.CustomScheduleBtn;
+                btnCustomSchedule.Enabled = ScheduleEnabled;
+                btnCustomSchedule.BackColor = Theme.ControlFill;
+                btnCustomSchedule.ForeColor = Theme.TextPrimary;
+                btnCustomSchedule.FlatAppearance.BorderColor = Theme.Stroke;
+            }
+
+            if (lblCustomIndicator != null)
+            {
+                lblCustomIndicator.Text = Lang.CustomScheduleActive;
+                lblCustomIndicator.ForeColor = Theme.Accent;
+                lblCustomIndicator.Visible = ScheduleEnabled && ScheduleCustomPerDay;
+            }
+
+            bool enableGlobalTimes = ScheduleEnabled && !ScheduleCustomPerDay;
+            if (dtpScheduleFrom != null) dtpScheduleFrom.Enabled = enableGlobalTimes;
+            if (dtpScheduleTo != null) dtpScheduleTo.Enabled = enableGlobalTimes;
+            if (lblScheduleFrom != null) lblScheduleFrom.Enabled = enableGlobalTimes;
+            if (lblScheduleTo != null) lblScheduleTo.Enabled = enableGlobalTimes;
         }
 
         public static string GetHotkeyText(uint mods, uint vk)
@@ -834,14 +1849,20 @@ namespace BossKeyTool
 
         public MainForm()
         {
-            this.Size = new Size(760, 830);
-            this.MinimumSize = new Size(700, 760);
+            this.Size = new Size(620, 875);
+            this.MinimumSize = new Size(560, 800);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Font = Theme.FontBody;
             this.DoubleBuffered = true;
 
             taskbar = (ITaskbarList)new TaskbarListClass();
             taskbar.HrInit();
+
+            foreach (DayOfWeek d in OrderedDaysOfWeek)
+            {
+                bool isWeekday = (d != DayOfWeek.Saturday && d != DayOfWeek.Sunday);
+                CustomDaySchedules[d] = new DaySchedule(d, isWeekday, ScheduleFrom, ScheduleTo);
+            }
 
             LoadLangSetting();
             LoadSettings();
@@ -894,73 +1915,109 @@ namespace BossKeyTool
 
         private void InitUI()
         {
-            titleLabel = new Label() { Font = Theme.FontTitle, AutoSize = true, Location = new Point(24, 24) };
-            subTitleLabel = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(24, 55) };
+            titleLabel = new Label() { Font = Theme.FontTitle, AutoSize = true, Location = new Point(20, 18) };
+            subTitleLabel = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(20, 48) };
             this.Controls.Add(titleLabel);
             this.Controls.Add(subTitleLabel);
 
             searchBox = new TextBox();
-            searchBox.Font = new Font("Segoe UI", 11F);
-            searchBox.Location = new Point(24, 85);
-            searchBox.Size = new Size(this.ClientSize.Width - 148, 28);
+            searchBox.Font = new Font("Segoe UI", 9.5F);
+            searchBox.Location = new Point(20, 78);
+            searchBox.Size = new Size(this.ClientSize.Width - 115, 26);
             searchBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             searchBox.BorderStyle = BorderStyle.FixedSingle;
             searchBox.TextChanged += SearchBox_TextChanged;
             this.Controls.Add(searchBox);
 
             refreshButton = new Button();
-            refreshButton.Size = new Size(100, 28);
-            refreshButton.Location = new Point(this.ClientSize.Width - 124, 85);
+            refreshButton.Size = new Size(85, 26);
+            refreshButton.Location = new Point(this.ClientSize.Width - 95, 77);
             refreshButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             refreshButton.FlatStyle = FlatStyle.Flat;
+            refreshButton.Font = Theme.FontBodySmall;
             refreshButton.Cursor = Cursors.Hand;
             refreshButton.Click += RefreshButton_Click;
             this.Controls.Add(refreshButton);
 
             listPanel = new FlowLayoutPanel();
-            listPanel.Location = new Point(24, 125);
-            listPanel.Size = new Size(this.ClientSize.Width - 48, this.ClientSize.Height - 590);
+            listPanel.Location = new Point(20, 114);
+            listPanel.Size = new Size(this.ClientSize.Width - 40, this.ClientSize.Height - 624);
             listPanel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
             listPanel.AutoScroll = true;
+            listPanel.HorizontalScroll.Maximum = 0;
+            listPanel.HorizontalScroll.Enabled = false;
+            listPanel.HorizontalScroll.Visible = false;
             listPanel.FlowDirection = FlowDirection.TopDown;
             listPanel.WrapContents = false;
             this.Controls.Add(listPanel);
 
+            listPanel.HandleCreated += delegate {
+                try {
+                    AllowDarkModeForWindow(listPanel.Handle, Theme.IsDark);
+                    SetWindowTheme(listPanel.Handle, Theme.IsDark ? "DarkMode_Explorer" : "Explorer", null);
+                    ShowScrollBar(listPanel.Handle, SB_HORZ, false);
+                } catch { }
+            };
+
+            listPanel.Layout += delegate {
+                try {
+                    listPanel.HorizontalScroll.Maximum = 0;
+                    listPanel.HorizontalScroll.Visible = false;
+                    ShowScrollBar(listPanel.Handle, SB_HORZ, false);
+                    int targetW = listPanel.ClientSize.Width;
+                    foreach (Control c in listPanel.Controls) {
+                        if (c.Width != targetW) c.Width = targetW;
+                    }
+                } catch { }
+            };
+
+            listPanel.SizeChanged += delegate {
+                try {
+                    listPanel.HorizontalScroll.Maximum = 0;
+                    listPanel.HorizontalScroll.Visible = false;
+                    ShowScrollBar(listPanel.Handle, SB_HORZ, false);
+                    int targetW = listPanel.ClientSize.Width;
+                    foreach (Control c in listPanel.Controls) {
+                        if (c.Width != targetW) c.Width = targetW;
+                    }
+                } catch { }
+            };
+
             lblSet = new Label() { Font = Theme.FontSubtitle, AutoSize = true };
-            lblSet.Location = new Point(24, this.ClientSize.Height - 452);
+            lblSet.Location = new Point(20, this.ClientSize.Height - 495);
             lblSet.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             this.Controls.Add(lblSet);
 
             Panel setPanel = new Panel();
-            setPanel.Location = new Point(24, this.ClientSize.Height - 422);
-            setPanel.Size = new Size(this.ClientSize.Width - 48, 345);
+            setPanel.Location = new Point(20, this.ClientSize.Height - 465);
+            setPanel.Size = new Size(this.ClientSize.Width - 40, 388);
             setPanel.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             this.Controls.Add(setPanel);
 
-            lblStart = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(16, 12) };
-            lblStartSub = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(16, 32) };
+            lblStart = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(14, 16) };
+            lblStartSub = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(14, 38) };
             setPanel.Controls.Add(lblStart);
             setPanel.Controls.Add(lblStartSub);
 
             startupToggle = new FluentToggle();
-            startupToggle.Location = new Point(setPanel.Width - 60, 16);
+            startupToggle.Location = new Point(setPanel.Width - 54, 20);
             startupToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             startupToggle.Checked = IsStartupEnabled();
             startupToggle.CheckedChanged += delegate { startupLabel.Text = startupToggle.Checked ? (Lang.IsEng ? "On" : "Bật") : (Lang.IsEng ? "Off" : "Tắt"); };
             setPanel.Controls.Add(startupToggle);
 
-            startupLabel = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(setPanel.Width - 105, 18) };
+            startupLabel = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(setPanel.Width - 96, 21) };
             startupLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             startupLabel.Text = startupToggle.Checked ? (Lang.IsEng ? "On" : "Bật") : (Lang.IsEng ? "Off" : "Tắt");
             setPanel.Controls.Add(startupLabel);
 
-            lblShowStart = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(16, 56) };
-            lblShowStartSub = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(16, 76) };
+            lblShowStart = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(14, 58) };
+            lblShowStartSub = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(14, 80) };
             setPanel.Controls.Add(lblShowStart);
             setPanel.Controls.Add(lblShowStartSub);
 
             showStartToggle = new FluentToggle();
-            showStartToggle.Location = new Point(setPanel.Width - 60, 60);
+            showStartToggle.Location = new Point(setPanel.Width - 54, 62);
             showStartToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             showStartToggle.Checked = LoadShowStartSetting();
             showStartToggle.CheckedChanged += delegate { 
@@ -969,18 +2026,18 @@ namespace BossKeyTool
             };
             setPanel.Controls.Add(showStartToggle);
 
-            showStartLabel = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(setPanel.Width - 105, 62) };
+            showStartLabel = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(setPanel.Width - 96, 63) };
             showStartLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             showStartLabel.Text = showStartToggle.Checked ? (Lang.IsEng ? "On" : "Bật") : (Lang.IsEng ? "Off" : "Tắt");
             setPanel.Controls.Add(showStartLabel);
 
-            lblMute = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(16, 100) };
-            lblMuteSub = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(16, 120) };
+            lblMute = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(14, 100) };
+            lblMuteSub = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(14, 122) };
             setPanel.Controls.Add(lblMute);
             setPanel.Controls.Add(lblMuteSub);
 
             muteToggle = new FluentToggle();
-            muteToggle.Location = new Point(setPanel.Width - 60, 104);
+            muteToggle.Location = new Point(setPanel.Width - 54, 104);
             muteToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             muteToggle.Checked = MuteOnMinimize;
             muteToggle.CheckedChanged += delegate {
@@ -994,84 +2051,138 @@ namespace BossKeyTool
             };
             setPanel.Controls.Add(muteToggle);
 
-            muteLabel = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(setPanel.Width - 105, 106) };
+            muteLabel = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(setPanel.Width - 96, 105) };
             muteLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             muteLabel.Text = muteToggle.Checked ? (Lang.IsEng ? "On" : "Bật") : (Lang.IsEng ? "Off" : "Tắt");
             setPanel.Controls.Add(muteLabel);
 
-            lblSchedule = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(16, 144) };
-            lblScheduleSub = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(16, 164) };
+            lblSchedule = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(14, 144) };
+            lblScheduleSub = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(14, 166) };
             setPanel.Controls.Add(lblSchedule);
             setPanel.Controls.Add(lblScheduleSub);
 
             scheduleToggle = new FluentToggle();
-            scheduleToggle.Location = new Point(setPanel.Width - 60, 148);
+            scheduleToggle.Location = new Point(setPanel.Width - 54, 148);
             scheduleToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             scheduleToggle.Checked = ScheduleEnabled;
             scheduleToggle.CheckedChanged += delegate {
                 ScheduleEnabled = scheduleToggle.Checked;
                 scheduleLabel.Text = scheduleToggle.Checked ? (Lang.IsEng ? "On" : "Bật") : (Lang.IsEng ? "Off" : "Tắt");
-                dtpScheduleFrom.Enabled = scheduleToggle.Checked;
-                dtpScheduleTo.Enabled = scheduleToggle.Checked;
-                lblScheduleFrom.Enabled = scheduleToggle.Checked;
-                lblScheduleTo.Enabled = scheduleToggle.Checked;
+                UpdateScheduleUIState();
                 SaveConfigValue("ScheduleEnabled", ScheduleEnabled.ToString());
             };
             setPanel.Controls.Add(scheduleToggle);
 
-            scheduleLabel = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(setPanel.Width - 105, 150) };
+            scheduleLabel = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(setPanel.Width - 96, 149) };
             scheduleLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             scheduleLabel.Text = scheduleToggle.Checked ? (Lang.IsEng ? "On" : "Bật") : (Lang.IsEng ? "Off" : "Tắt");
             setPanel.Controls.Add(scheduleLabel);
 
-            lblScheduleFrom = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(16, 192), Enabled = ScheduleEnabled };
+            lblScheduleFrom = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(14, 191), Enabled = ScheduleEnabled };
             setPanel.Controls.Add(lblScheduleFrom);
 
             DateTime today = DateTime.Today;
 
-            dtpScheduleFrom = new DateTimePicker();
-            dtpScheduleFrom.Format = DateTimePickerFormat.Custom;
-            dtpScheduleFrom.CustomFormat = "HH:mm";
-            dtpScheduleFrom.ShowUpDown = true;
-            dtpScheduleFrom.Font = new Font("Segoe UI", 9.5F);
-            dtpScheduleFrom.Location = new Point(56, 189);
-            dtpScheduleFrom.Width = 70;
+            dtpScheduleFrom = new DarkTimePicker();
+            dtpScheduleFrom.Location = new Point(48, 187);
+            dtpScheduleFrom.Size = new Size(66, 26);
             dtpScheduleFrom.Value = today.Add(ScheduleFrom);
-            dtpScheduleFrom.Enabled = ScheduleEnabled;
+            dtpScheduleFrom.Enabled = ScheduleEnabled && !ScheduleCustomPerDay;
             dtpScheduleFrom.ValueChanged += delegate {
                 ScheduleFrom = dtpScheduleFrom.Value.TimeOfDay;
                 SaveConfigValue("ScheduleFrom", ScheduleFrom.ToString(@"hh\:mm"));
+                if (!ScheduleCustomPerDay)
+                {
+                    foreach (DayOfWeek d in OrderedDaysOfWeek)
+                    {
+                        if (CustomDaySchedules.ContainsKey(d)) CustomDaySchedules[d].From = ScheduleFrom;
+                    }
+                }
             };
             setPanel.Controls.Add(dtpScheduleFrom);
 
-            lblScheduleTo = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(136, 192), Enabled = ScheduleEnabled };
+            lblScheduleTo = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(118, 191), Enabled = ScheduleEnabled };
             setPanel.Controls.Add(lblScheduleTo);
 
-            dtpScheduleTo = new DateTimePicker();
-            dtpScheduleTo.Format = DateTimePickerFormat.Custom;
-            dtpScheduleTo.CustomFormat = "HH:mm";
-            dtpScheduleTo.ShowUpDown = true;
-            dtpScheduleTo.Font = new Font("Segoe UI", 9.5F);
-            dtpScheduleTo.Location = new Point(176, 189);
-            dtpScheduleTo.Width = 70;
+            dtpScheduleTo = new DarkTimePicker();
+            dtpScheduleTo.Location = new Point(152, 187);
+            dtpScheduleTo.Size = new Size(66, 26);
             dtpScheduleTo.Value = today.Add(ScheduleTo);
-            dtpScheduleTo.Enabled = ScheduleEnabled;
+            dtpScheduleTo.Enabled = ScheduleEnabled && !ScheduleCustomPerDay;
             dtpScheduleTo.ValueChanged += delegate {
                 ScheduleTo = dtpScheduleTo.Value.TimeOfDay;
                 SaveConfigValue("ScheduleTo", ScheduleTo.ToString(@"hh\:mm"));
+                if (!ScheduleCustomPerDay)
+                {
+                    foreach (DayOfWeek d in OrderedDaysOfWeek)
+                    {
+                        if (CustomDaySchedules.ContainsKey(d)) CustomDaySchedules[d].To = ScheduleTo;
+                    }
+                }
             };
             setPanel.Controls.Add(dtpScheduleTo);
 
-            lblHotkey = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(16, 226) };
-            lblHotkeySub = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(16, 246) };
+            lblScheduleDays = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(14, 225), Enabled = ScheduleEnabled, Visible = true };
+            setPanel.Controls.Add(lblScheduleDays);
+
+            dayPillButtons = new DayPillButton[OrderedDaysOfWeek.Length];
+            for (int i = 0; i < OrderedDaysOfWeek.Length; i++)
+            {
+                DayOfWeek d = OrderedDaysOfWeek[i];
+                string text = Lang.IsEng ? Lang.ShortDaysEng[i] : Lang.ShortDaysVi[i];
+                bool isSel = ScheduleDays.Contains(d);
+                DayPillButton pill = new DayPillButton(d, text, isSel);
+                pill.Location = new Point(54 + i * 34, 222);
+                pill.Enabled = ScheduleEnabled;
+                pill.SelectedChanged += delegate(object s, EventArgs ev) {
+                    DayPillButton p = (DayPillButton)s;
+                    if (p.Selected)
+                    {
+                        ScheduleDays.Add(p.Day);
+                        if (CustomDaySchedules.ContainsKey(p.Day)) CustomDaySchedules[p.Day].Enabled = true;
+                    }
+                    else
+                    {
+                        ScheduleDays.Remove(p.Day);
+                        if (CustomDaySchedules.ContainsKey(p.Day)) CustomDaySchedules[p.Day].Enabled = false;
+                    }
+                    SaveConfigValue("ScheduleDays", string.Join(",", GetDayKeys(ScheduleDays)));
+                };
+                setPanel.Controls.Add(pill);
+                dayPillButtons[i] = pill;
+            }
+
+            btnCustomSchedule = new Button();
+            btnCustomSchedule.Text = Lang.CustomScheduleBtn;
+            btnCustomSchedule.Font = Theme.FontBodySmall;
+            btnCustomSchedule.Location = new Point(298, 221);
+            btnCustomSchedule.Size = new Size(122, 26);
+            btnCustomSchedule.FlatStyle = FlatStyle.Flat;
+            btnCustomSchedule.Cursor = Cursors.Hand;
+            btnCustomSchedule.Enabled = ScheduleEnabled;
+            btnCustomSchedule.Click += delegate {
+                OpenCustomScheduleDialog();
+            };
+            setPanel.Controls.Add(btnCustomSchedule);
+
+            lblCustomIndicator = new Label();
+            lblCustomIndicator.Font = Theme.FontBodySmall;
+            lblCustomIndicator.AutoSize = true;
+            lblCustomIndicator.Location = new Point(426, 225);
+            lblCustomIndicator.Text = Lang.CustomScheduleActive;
+            lblCustomIndicator.Visible = ScheduleEnabled && ScheduleCustomPerDay;
+            setPanel.Controls.Add(lblCustomIndicator);
+
+            lblHotkey = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(14, 260) };
+            lblHotkeySub = new Label() { Font = Theme.FontBodySmall, AutoSize = true, Location = new Point(14, 282) };
             setPanel.Controls.Add(lblHotkey);
             setPanel.Controls.Add(lblHotkeySub);
 
             hotkeyBox = new TextBox();
             hotkeyBox.ReadOnly = true;
-            hotkeyBox.Font = new Font("Segoe UI Semibold", 9.5F);
+            hotkeyBox.Font = Theme.FontBody;
             hotkeyBox.TextAlign = HorizontalAlignment.Center;
-            hotkeyBox.Location = new Point(setPanel.Width - 140, 224);
+            hotkeyBox.Location = new Point(setPanel.Width - 134, 262);
             hotkeyBox.Width = 120;
             hotkeyBox.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             hotkeyBox.Cursor = Cursors.Hand;
@@ -1081,24 +2192,24 @@ namespace BossKeyTool
             hotkeyBox.KeyDown += HotkeyBox_KeyDown;
             setPanel.Controls.Add(hotkeyBox);
 
-            lblTheme = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(16, 270) };
+            lblTheme = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(14, 306) };
             setPanel.Controls.Add(lblTheme);
 
-            themeCombo = new ComboBox();
+            themeCombo = new NoScrollComboBox();
             themeCombo.DropDownStyle = ComboBoxStyle.DropDownList;
-            themeCombo.Location = new Point(setPanel.Width - 140, 268);
+            themeCombo.Location = new Point(setPanel.Width - 134, 303);
             themeCombo.Width = 120;
             themeCombo.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             themeCombo.SelectedIndexChanged += ThemeCombo_SelectedIndexChanged;
             setPanel.Controls.Add(themeCombo);
 
-            lblLang = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(16, 308) };
+            lblLang = new Label() { Font = Theme.FontBody, AutoSize = true, Location = new Point(14, 344) };
             setPanel.Controls.Add(lblLang);
 
-            langCombo = new ComboBox();
+            langCombo = new NoScrollComboBox();
             langCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             langCombo.Items.AddRange(Lang.Languages);
-            langCombo.Location = new Point(setPanel.Width - 140, 306);
+            langCombo.Location = new Point(setPanel.Width - 134, 341);
             langCombo.Width = 120;
             langCombo.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             langCombo.SelectedIndex = Lang.IsEng ? 1 : 0;
@@ -1106,19 +2217,19 @@ namespace BossKeyTool
             setPanel.Controls.Add(langCombo);
 
             saveButton = new Button();
-            saveButton.Size = new Size(this.ClientSize.Width - 48, 38);
-            saveButton.Location = new Point(24, this.ClientSize.Height - 68);
+            saveButton.Size = new Size(this.ClientSize.Width - 40, 36);
+            saveButton.Location = new Point(20, this.ClientSize.Height - 65);
             saveButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             saveButton.FlatStyle = FlatStyle.Flat;
             saveButton.Cursor = Cursors.Hand;
-            saveButton.Font = new Font("Segoe UI Semibold", 11F);
+            saveButton.Font = new Font("Segoe UI Semibold", 10F);
             saveButton.Click += SaveButton_Click;
             this.Controls.Add(saveButton);
 
             lblCredits = new Label();
-            lblCredits.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
+            lblCredits.Font = new Font("Segoe UI", 8F, FontStyle.Italic);
             lblCredits.AutoSize = true;
-            lblCredits.Location = new Point(this.ClientSize.Width - 140, this.ClientSize.Height - 24);
+            lblCredits.Location = new Point(this.ClientSize.Width - 120, this.ClientSize.Height - 22);
             lblCredits.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             this.Controls.Add(lblCredits);
         }
@@ -1178,6 +2289,21 @@ namespace BossKeyTool
             lblScheduleSub.Text = Lang.ScheduleSub;
             lblScheduleFrom.Text = Lang.ScheduleFrom;
             lblScheduleTo.Text = Lang.ScheduleTo;
+            if (lblScheduleDays != null) lblScheduleDays.Text = Lang.ScheduleDaysLabel;
+            if (btnCustomSchedule != null) btnCustomSchedule.Text = Lang.CustomScheduleBtn;
+            if (lblCustomIndicator != null) lblCustomIndicator.Text = Lang.CustomScheduleActive;
+            if (dayPillButtons != null)
+            {
+                for (int i = 0; i < OrderedDaysOfWeek.Length; i++)
+                {
+                    if (dayPillButtons[i] != null)
+                    {
+                        dayPillButtons[i].DisplayText = Lang.IsEng ? Lang.ShortDaysEng[i] : Lang.ShortDaysVi[i];
+                        dayPillButtons[i].Invalidate();
+                    }
+                }
+            }
+            UpdateScheduleUIState();
             lblHotkey.Text = Lang.Hotkey;
             lblHotkeySub.Text = Lang.HotkeySub;
             lblTheme.Text = Lang.Theme;
@@ -1202,7 +2328,7 @@ namespace BossKeyTool
             contextMenu.MenuItems[3].Text = Lang.MenuExit;
 
             lblCredits.Text = Lang.Credits;
-            lblCredits.Left = this.ClientSize.Width - 24 - lblCredits.PreferredWidth;
+            lblCredits.Left = this.ClientSize.Width - 20 - lblCredits.PreferredWidth;
 
             foreach (Control c in listPanel.Controls)
             {
@@ -1264,6 +2390,21 @@ namespace BossKeyTool
 
             int useImmersiveDarkMode = Theme.IsDark ? 1 : 0;
             DwmSetWindowAttribute(this.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useImmersiveDarkMode, sizeof(int));
+            try {
+                SetPreferredAppMode(Theme.IsDark ? 2 : 3);
+                AllowDarkModeForWindow(this.Handle, Theme.IsDark);
+                SetWindowTheme(this.Handle, Theme.IsDark ? "DarkMode_Explorer" : "Explorer", null);
+                if (listPanel != null && listPanel.IsHandleCreated) {
+                    AllowDarkModeForWindow(listPanel.Handle, Theme.IsDark);
+                    SetWindowTheme(listPanel.Handle, Theme.IsDark ? "DarkMode_Explorer" : "Explorer", null);
+                    ShowScrollBar(listPanel.Handle, SB_HORZ, false);
+                    RedrawWindow(listPanel.Handle, IntPtr.Zero, IntPtr.Zero, RDW_FRAME | RDW_INVALIDATE | RDW_UPDATENOW);
+                }
+                if (searchBox != null && searchBox.IsHandleCreated)
+                    SetWindowTheme(searchBox.Handle, Theme.IsDark ? "DarkMode_CFD" : "CFD", null);
+                if (hotkeyBox != null && hotkeyBox.IsHandleCreated)
+                    SetWindowTheme(hotkeyBox.Handle, Theme.IsDark ? "DarkMode_CFD" : "CFD", null);
+            } catch { }
 
             foreach (Control c in this.Controls)
             {
@@ -1280,6 +2421,8 @@ namespace BossKeyTool
             lblScheduleSub.ForeColor = Theme.TextSecondary;
             lblScheduleFrom.ForeColor = Theme.TextPrimary;
             lblScheduleTo.ForeColor = Theme.TextPrimary;
+            if (lblScheduleDays != null) lblScheduleDays.ForeColor = Theme.TextSecondary;
+            UpdateScheduleUIState();
             lblHotkey.ForeColor = Theme.TextPrimary;
             lblHotkeySub.ForeColor = Theme.TextSecondary;
             lblTheme.ForeColor = Theme.TextPrimary;
@@ -1311,18 +2454,29 @@ namespace BossKeyTool
             saveButton.ForeColor = Theme.OnAccent;
             saveButton.FlatAppearance.BorderSize = 0;
 
-            themeCombo.BackColor = Theme.ControlFill;
-            themeCombo.ForeColor = Theme.TextPrimary;
+            if (themeCombo != null) themeCombo.ApplyTheme();
+            if (langCombo != null) langCombo.ApplyTheme();
 
-            langCombo.BackColor = Theme.ControlFill;
-            langCombo.ForeColor = Theme.TextPrimary;
+            if (dtpScheduleFrom != null) dtpScheduleFrom.Invalidate();
+            if (dtpScheduleTo != null) dtpScheduleTo.Invalidate();
 
-            dtpScheduleFrom.CalendarForeColor = Theme.TextPrimary;
-            dtpScheduleFrom.CalendarMonthBackground = Theme.ControlFill;
-            dtpScheduleFrom.CalendarTitleBackColor = Theme.Accent;
-            dtpScheduleTo.CalendarForeColor = Theme.TextPrimary;
-            dtpScheduleTo.CalendarMonthBackground = Theme.ControlFill;
-            dtpScheduleTo.CalendarTitleBackColor = Theme.Accent;
+            if (btnCustomSchedule != null)
+            {
+                btnCustomSchedule.BackColor = Theme.ControlFill;
+                btnCustomSchedule.ForeColor = Theme.TextPrimary;
+                btnCustomSchedule.FlatAppearance.BorderColor = Theme.Stroke;
+            }
+            if (lblCustomIndicator != null)
+            {
+                lblCustomIndicator.ForeColor = Theme.Accent;
+            }
+            if (dayPillButtons != null)
+            {
+                foreach (DayPillButton pill in dayPillButtons)
+                {
+                    if (pill != null) pill.Invalidate();
+                }
+            }
         }
 
         private void LoadThemeSetting()
@@ -1371,6 +2525,28 @@ namespace BossKeyTool
                         } else if (key.Equals("ScheduleTo", StringComparison.OrdinalIgnoreCase)) {
                             TimeSpan res;
                             if (TimeSpan.TryParse(val, out res)) ScheduleTo = res;
+                        } else if (key.Equals("ScheduleDays", StringComparison.OrdinalIgnoreCase)) {
+                            ScheduleDays.Clear();
+                            foreach (string dStr in val.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries)) {
+                                DayOfWeek dow;
+                                if (TryParseDayOfWeek(dStr.Trim(), out dow)) ScheduleDays.Add(dow);
+                            }
+                        } else if (key.Equals("ScheduleCustomPerDay", StringComparison.OrdinalIgnoreCase)) {
+                            bool res;
+                            if (bool.TryParse(val, out res)) ScheduleCustomPerDay = res;
+                        } else if (key.StartsWith("Schedule_", StringComparison.OrdinalIgnoreCase)) {
+                            string dStr = key.Substring("Schedule_".Length).Trim();
+                            DayOfWeek dow;
+                            if (TryParseDayOfWeek(dStr, out dow)) {
+                                string[] parts = val.Split(new char[] { ',', '|' });
+                                if (parts.Length >= 3) {
+                                    bool en = parts[0] == "1" || parts[0].Equals("true", StringComparison.OrdinalIgnoreCase);
+                                    TimeSpan f, t;
+                                    if (TimeSpan.TryParse(parts[1], out f) && TimeSpan.TryParse(parts[2], out t)) {
+                                        CustomDaySchedules[dow] = new DaySchedule(dow, en, f, t);
+                                    }
+                                }
+                            }
                         } else if (key.Equals("Hotkey", StringComparison.OrdinalIgnoreCase)) {
                             string[] parts = val.Split('|');
                             if (parts.Length == 2) {
@@ -1395,6 +2571,17 @@ namespace BossKeyTool
             dict["ScheduleEnabled"] = ScheduleEnabled.ToString();
             dict["ScheduleFrom"] = ScheduleFrom.ToString(@"hh\:mm");
             dict["ScheduleTo"] = ScheduleTo.ToString(@"hh\:mm");
+            dict["ScheduleDays"] = string.Join(",", GetDayKeys(ScheduleDays));
+            dict["ScheduleCustomPerDay"] = ScheduleCustomPerDay.ToString();
+            foreach (DayOfWeek d in OrderedDaysOfWeek)
+            {
+                DaySchedule ds;
+                if (!CustomDaySchedules.TryGetValue(d, out ds))
+                {
+                    ds = new DaySchedule(d, ScheduleDays.Contains(d), ScheduleFrom, ScheduleTo);
+                }
+                dict["Schedule_" + GetShortDayName(d)] = (ds.Enabled ? "1" : "0") + "," + ds.From.ToString(@"hh\:mm") + "," + ds.To.ToString(@"hh\:mm");
+            }
             dict["Hotkey"] = HotkeyMods + "|" + HotkeyVK;
             SaveConfigValues(dict);
         }
@@ -1420,72 +2607,108 @@ namespace BossKeyTool
             if (dtpScheduleFrom != null) ScheduleFrom = dtpScheduleFrom.Value.TimeOfDay;
             if (dtpScheduleTo != null) ScheduleTo = dtpScheduleTo.Value.TimeOfDay;
 
+            if (dayPillButtons != null)
+            {
+                ScheduleDays.Clear();
+                foreach (var pill in dayPillButtons)
+                {
+                    if (pill.Selected)
+                    {
+                        ScheduleDays.Add(pill.Day);
+                        if (CustomDaySchedules.ContainsKey(pill.Day))
+                        {
+                            CustomDaySchedules[pill.Day].Enabled = true;
+                        }
+                    }
+                    else
+                    {
+                        if (CustomDaySchedules.ContainsKey(pill.Day))
+                        {
+                            CustomDaySchedules[pill.Day].Enabled = false;
+                        }
+                    }
+                }
+            }
+
             SaveSettingsToFile();
         }
 
         private void RefreshWindowsList()
         {
-            listPanel.Controls.Clear();
-            HashSet<string> currentProcesses = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            EnumWindows(delegate (IntPtr hWnd, IntPtr lParam)
+            listPanel.SuspendLayout();
+            try
             {
-                if (IsWindowVisible(hWnd))
-                {
-                    StringBuilder sb = new StringBuilder(256);
-                    GetWindowText(hWnd, sb, 256);
-                    string title = sb.ToString();
+                listPanel.Controls.Clear();
+                HashSet<string> currentProcesses = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                    if (!string.IsNullOrWhiteSpace(title) && title != this.Text)
+                EnumWindows(delegate (IntPtr hWnd, IntPtr lParam)
+                {
+                    if (IsWindowVisible(hWnd))
                     {
-                        uint pid;
-                        GetWindowThreadProcessId(hWnd, out pid);
-                        try
+                        StringBuilder sb = new StringBuilder(256);
+                        GetWindowText(hWnd, sb, 256);
+                        string title = sb.ToString();
+
+                        if (!string.IsNullOrWhiteSpace(title) && title != this.Text)
                         {
-                            Process proc = Process.GetProcessById((int)pid);
-                            string processName = proc.ProcessName;
-                            
-                            if (processName != "explorer" && processName != "Idle" && processName != "TextInputHost")
+                            uint pid;
+                            GetWindowThreadProcessId(hWnd, out pid);
+                            try
                             {
-                                if (!currentProcesses.Contains(processName))
+                                Process proc = Process.GetProcessById((int)pid);
+                                string processName = proc.ProcessName;
+                                
+                                if (processName != "explorer" && processName != "Idle" && processName != "TextInputHost")
                                 {
-                                    currentProcesses.Add(processName);
-                                    int mode = 0;
-                                    if (HideOnBlurApps.Contains(processName)) mode = 1;
-                                    else if (HideFromTaskbarApps.Contains(processName)) mode = 2;
-                                    
-                                    AppRowControl row = new AppRowControl(this, processName, title, mode, true);
-                                    row.Width = listPanel.ClientSize.Width - 5;
-                                    row.ApplyTheme();
-                                    listPanel.Controls.Add(row);
+                                    if (!currentProcesses.Contains(processName))
+                                    {
+                                        currentProcesses.Add(processName);
+                                        int mode = 0;
+                                        if (HideOnBlurApps.Contains(processName)) mode = 1;
+                                        else if (HideFromTaskbarApps.Contains(processName)) mode = 2;
+                                        
+                                        AppRowControl row = new AppRowControl(this, processName, title, mode, true);
+                                        row.Width = listPanel.ClientSize.Width;
+                                        row.ApplyTheme();
+                                        listPanel.Controls.Add(row);
+                                    }
                                 }
                             }
+                            catch { }
                         }
-                        catch { }
+                    }
+                    return true;
+                }, IntPtr.Zero);
+                
+                foreach(string p in HideOnBlurApps)
+                {
+                    if (!currentProcesses.Contains(p)) {
+                        AppRowControl row = new AppRowControl(this, p, p, 1, false);
+                        row.Width = listPanel.ClientSize.Width;
+                        row.ApplyTheme();
+                        listPanel.Controls.Add(row);
+                        currentProcesses.Add(p);
                     }
                 }
-                return true;
-            }, IntPtr.Zero);
-            
-            foreach(string p in HideOnBlurApps)
-            {
-                if (!currentProcesses.Contains(p)) {
-                    AppRowControl row = new AppRowControl(this, p, p, 1, false);
-                    row.Width = listPanel.ClientSize.Width - 5;
-                    row.ApplyTheme();
-                    listPanel.Controls.Add(row);
-                    currentProcesses.Add(p);
+                foreach(string p in HideFromTaskbarApps)
+                {
+                    if (!currentProcesses.Contains(p)) {
+                        AppRowControl row = new AppRowControl(this, p, p, 2, false);
+                        row.Width = listPanel.ClientSize.Width;
+                        row.ApplyTheme();
+                        listPanel.Controls.Add(row);
+                        currentProcesses.Add(p);
+                    }
                 }
             }
-            foreach(string p in HideFromTaskbarApps)
+            finally
             {
-                if (!currentProcesses.Contains(p)) {
-                    AppRowControl row = new AppRowControl(this, p, p, 2, false);
-                    row.Width = listPanel.ClientSize.Width - 5;
-                    row.ApplyTheme();
-                    listPanel.Controls.Add(row);
-                    currentProcesses.Add(p);
-                }
+                listPanel.ResumeLayout(true);
+                try {
+                    listPanel.HorizontalScroll.Maximum = 0;
+                    listPanel.HorizontalScroll.Visible = false;
+                    ShowScrollBar(listPanel.Handle, SB_HORZ, false);
+                } catch { }
             }
             SearchBox_TextChanged(null, null); 
         }
@@ -1901,6 +3124,19 @@ namespace BossKeyTool
         [STAThread]
         static void Main(string[] args)
         {
+            try { SetPreferredAppMode(2); } catch { }
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+            Application.ThreadException += delegate(object sender, System.Threading.ThreadExceptionEventArgs e) {
+                try {
+                    File.WriteAllText(Path.Combine(Application.StartupPath, "app_error.log"), e.Exception.ToString());
+                } catch { }
+            };
+            AppDomain.CurrentDomain.UnhandledException += delegate(object sender, UnhandledExceptionEventArgs e) {
+                try {
+                    File.WriteAllText(Path.Combine(Application.StartupPath, "app_error.log"), (e.ExceptionObject != null ? e.ExceptionObject.ToString() : "Unknown"));
+                } catch { }
+            };
+
             try
             {
                 Application.EnableVisualStyles();
@@ -1914,7 +3150,9 @@ namespace BossKeyTool
             }
             catch (Exception ex)
             {
-                File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_error.log"), ex.ToString());
+                try {
+                    File.WriteAllText(Path.Combine(Application.StartupPath, "app_error.log"), ex.ToString());
+                } catch { }
             }
         }
     }

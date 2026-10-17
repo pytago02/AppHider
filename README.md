@@ -25,7 +25,9 @@
 3. **Tìm kiếm & Lọc**: Sử dụng thanh tìm kiếm phía trên danh sách để lọc nhanh ứng dụng cần cài đặt.
 4. **Cài đặt nâng cao (Cài đặt chung)**:
    - **Tắt tiếng khi thu nhỏ / ẩn ứng dụng**: Tự động ngắt tiếng ứng dụng khi bị thu nhỏ hoặc bị ẩn và tự động khôi phục âm thanh khi mở lại.
-   - **Khung giờ hoạt động**: Đặt thời gian (Từ ... Đến ...) để AppHider chỉ áp dụng tự động ẩn và tắt tiếng trong khung giờ quy định (ví dụ: giờ làm việc).
+   - **Khung giờ hoạt động theo thứ trong tuần**:
+     - Đặt khung giờ (Từ ... Đến ...) và chọn các thứ trong tuần (T2 -> CN) để chỉ tự động ẩn và tắt tiếng trong khoảng thời gian quy định (ví dụ: Thứ 2 đến Thứ 6).
+     - Hỗ trợ **Tùy chỉnh từng ngày**: Thiết lập khung giờ riêng biệt cho từng thứ trong tuần (ví dụ: T2-T6 làm việc cả ngày, T7 làm việc buổi sáng, Chủ nhật nghỉ).
    - **Khởi động cùng Windows**: Tự động chạy AppHider ngầm khi bật máy.
    - **Hiện khi khởi động**: Quyết định hiển thị bảng điều khiển khi mở máy hay tự động thu xuống khay hệ thống.
 5. **Lưu cấu hình**: Bấm nút **Lưu và thu xuống khay hệ thống**. AppHider sẽ ghi nhớ cài đặt vào `config.ini` và tiếp tục hoạt động ngầm.
@@ -48,7 +50,7 @@
 - **Boss Key siêu tốc**: Phím tắt toàn hệ thống `Ctrl + F12` mở lại mọi ứng dụng ẩn chỉ trong tích tắc.
 - **Cơ chế ẩn toàn diện**: Biến mất hoàn toàn khỏi màn hình Desktop, Taskbar và Alt+Tab.
 - **Quản lý âm thanh thông minh**: Mute process trực tiếp qua Core Audio API khi ẩn/thu nhỏ và tự unmute khi quay lại.
-- **Lập lịch linh hoạt**: Chỉ kích hoạt tính năng trong khung giờ làm việc mong muốn.
+- **Lập lịch linh hoạt theo tuần**: Chỉ kích hoạt trong khung giờ làm việc mong muốn, chọn ngày theo thứ trong tuần (T2 - CN) hoặc tùy chỉnh khung giờ riêng biệt cho từng ngày.
 - **Giao diện Windows 11 Fluent**: Hỗ trợ Dark Mode / Light Mode và chuyển đổi ngôn ngữ (Tiếng Việt / English).
 - **100% Portable**: Dung lượng nhẹ, không cần cài đặt, không rác registry hệ thống.
 
